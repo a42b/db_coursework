@@ -3,14 +3,14 @@ home: true
 actionText: Розпочати →
 actionLink: /intro/
 
-footer: "ECL 2.0 Licensed | Copyright © [2023] [Antonenko Tymofii]"
+footer: "ECL 2.0 Licensed | Copyright © [2023] [Antonina Bondar]"
 ---
 
 
 **Виконав:** 
 
 *студент 2-го курсу, групи ІМ-21*
-<span padding-right:5em></span> **Тимофій АНТОНЕНКО** *antonenkotimofii@gmail.com* <a href="https://t.me/limon_chick7327" target="_blank"> Telegram </a>
+<span padding-right:5em></span> **Антоніна Бондар** *antonina.a.bondar@gmail.com* <a href="https://t.me/aantonniii" target="_blank"> Telegram </a>
 
 **Керівник**
 
