@@ -207,6 +207,8 @@
         ON UPDATE NO ACTION)
         ENGINE = InnoDB;
 
+    INSERT INTO mydb.Role (id, name) VALUES (1, 'Expert');
+    INSERT INTO mydb.Role (id, name) VALUES (2, 'User');
     SET SQL_MODE=@OLD_SQL_MODE;
     SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
     SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
@@ -217,297 +219,169 @@
 ## RESTfull сервіс для управління даними
 
 RESTfull API для управління даними таблиці Survey створеної в MySQL 
-було створено за допомогою фреймворку Spring Boot на мові Java. 
+було створено за допомогою фреймворку Espress.js. 
 RESTfull API представляє собою CRUD застосунок. 
 
-### Файл .gradle з встановленими залежностями
+### Кореневий файл server.js
 
 ```
-    plugins {
-	    id 'java'
-	    id 'org.springframework.boot' version '3.2.0'
-	    id 'io.spring.dependency-management' version '1.1.4'
+    const express = require("express");
+    const bodyParser = require("body-parser");
+    const connection = require("./database");
+
+    const app = express();
+    const port = process.env.PORT || 8080;
+
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(bodyParser.json());
+
+    const routes = require("./routes");
+    routes(app);
+
+    app.listen(port, () => {
+    console.log(`App listen on port ${port}`);
+    });
+```
+
+### Підключення бази даних database.js
+
+```
+    const mysql = require("mysql2");
+
+    const connection = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "1111",
+    database: "mydb",
+    });
+
+    connection.connect((err) => {
+    if (err) {
+        console.error('Error connecting to database:', err);
+    } else {
+        console.log('Connected to database!');
+    }
+    });
+
+    module.exports = connection;
+
+```
+
+### Routers route.js
+```
+    "use strict";
+
+    module.exports = (app) => {
+    const users = require("./controller");
+
+    app.route("/users").get(users.getAll);
+    app.route("/user/:id").get(users.get);
+    app.route("/users/add").post(users.add);
+    app.route("/user/update").patch(users.update);
+    app.route("/user/delete/:id/:role_id").delete(users.delete);
+};
+```
+
+### Контроллери controller.js
+
+```
+   "use strict";
+
+    const db = require("./database");
+
+    exports.getAll = (req, res) => {
+    console.log('getAll')
+    const query = `SELECT * FROM User`;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.sendStatus(404);
+        res.status(200).json(result);
+    });
+    };
+
+    exports.get = (req, res) => {
+    const query = `SELECT * FROM User WHERE id=${req.params.id}`;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.sendStatus(404);
+        res.status(200).json(result[0]);
+    });
+    };
+
+    exports.add = (req, res) => {
+    const { firstname, lastname, email, id, Role_id} = req.body;
+    if (!(firstname && lastname && id && Role_id))
+        return res.status(400).json("Firstname, lastname, id and role id are required");
+    db.query(`SELECT * FROM user WHERE id=${id} AND Role_id=${Role_id}`, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length !== 0)
+        return res.status(404).json(`User with id ${id} exists`);
+        const query =
+        "INSERT INTO `user`(`firstname`, `lastname`, `email`, `id`, `Role_id`) VALUES('" +
+        firstname +
+        "', '" +
+        lastname +
+        "', '" +
+        email +
+        "', '" +
+        id +
+        "', '" +
+        Role_id +
+        "')";
+        db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.status(201).json(`User with id ${id} was created`);
+        });
+    });
+    };
+
+    exports.update = (req, res) => {
+    const { id, role_id } = req.query;
+    const { firstname, lastname, email } = req.body;
+
+    if (!(firstname || lastname || email)) {
+        return res.status(400).json("Required firstname, lastname, or email");
     }
 
-    group = 'com.example'
-    version = '0.0.1-SNAPSHOT'
+    let updateQuery = "UPDATE user SET ";
+    const updateFields = [];
 
-    java {
-	    sourceCompatibility = '17'
+    if (firstname) {
+        updateFields.push(`firstname='${firstname}'`);
+    }
+    if (lastname) {
+        updateFields.push(`lastname='${lastname}'`);
+    }
+    if (email) {
+        updateFields.push(`email='${email}'`);
     }
 
-    repositories {
-	    mavenCentral()
-    }
+    updateQuery += updateFields.join(', ') + ` WHERE id=${id} AND Role_id=${role_id}`;
 
-    dependencies {
-	    implementation 'org.springframework.boot:spring-boot-starter-web'
-	    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	    implementation 'mysql:mysql-connector-java:8.0.28'
-	    runtimeOnly 'mysql:mysql-connector-java'
-	    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    }
-
-    tasks.named('test') {
-	    useJUnitPlatform()
-    }
-```
-
-### Підключення бази даних
-
-```
-    spring.jpa.hibernate.ddl-auto=update
-    spring.datasource.url=jdbc:mysql://localhost:3306/lab6?useUnicode=true&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    spring.datasource.username=root
-    spring.datasource.password=7327Tim2005&
-
-```
-
-### Основний клас для запуску API
-```
-    package com.example.lab6;
-
-    import org.springframework.boot.SpringApplication;
-    import org.springframework.boot.autoconfigure.SpringBootApplication;
-    
-    @SpringBootApplication
-    public class Lab6Application {
-    
-        public static void main(String[] args) {
-            SpringApplication.run(Lab6Application.class, args);
+    db.query(updateQuery, (err, result) => {
+        if (err) {
+        return res.status(500).json(err);
         }
-    }
-```
-
-### Клас сутності для взаємодії з БД
-
-```
-    package com.example.lab6.Entity;
-
-    import jakarta.persistence.*;
-    import java.sql.Date;
-    import java.time.LocalDate;
-    
-    @Entity
-    @Table(name = "survey")
-    public class SurveyEntity {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        private String title;
-        private String description;
-        private Date created = Date.valueOf(LocalDate.now());
-    
-        public SurveyEntity() {
+        if (result.affectedRows === 0) {
+        return res.status(404).json("No user with this id and role_id");
         }
-        public void setId(Long id) {
-            this.id = id;
-        }
-    
-        public Long getId() {
-            return id;
-        }
-    
-        public String getTitle() {
-            return title;
-        }
-    
-        public void setTitle(String title) {
-            this.title = title;
-        }
-    
-        public String getDescription() {
-            return description;
-        }
-    
-        public void setDescription(String description) {
-            this.description = description;
-        }
-    
-        public Date getCreated() {
-            return created;
-        }
-    
-        public void setCreated(Date created) {
-            this.created = created;
-        }
-    }
-```
+        res.status(200).json(`User with id ${id} and Role_id ${role_id} was updated`);
+    });
+    };
 
-### Контролер для роботи з опитуваннями
 
-```
-    package com.example.lab6.Controller;
-
-    import com.example.lab6.Entity.SurveyEntity;
-    import com.example.lab6.Exception.SurveyAlreadyExistException;
-    import com.example.lab6.Exception.SurveyNotFoundException;
-    import com.example.lab6.Service.SurveyService;
-    import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.web.bind.annotation.*;
-
-    @RestController
-    @RequestMapping("/surveys")
-    public class SurveyController {
-
-        @Autowired
-        private SurveyService surveyService;
-
-        @PostMapping
-        public ResponseEntity createSurvey(@RequestBody SurveyEntity survey){
-        try {
-            surveyService.createSurvey(survey);
-            return ResponseEntity.ok("Опитування було створено успішно");
-        } catch (SurveyAlreadyExistException exception){
-            return ResponseEntity.badRequest().body(exception.getMessage());
-        } catch (Exception exception){
-            return ResponseEntity.badRequest().body("Відбулась помилка створення опитування!");
-        }
-        }
-
-        @GetMapping
-        public ResponseEntity getOneSurvey(@RequestParam Long id){
-            try {
-                return ResponseEntity.ok(surveyService.getOne(id));
-            } catch (SurveyNotFoundException exception){
-                return ResponseEntity.badRequest().body(exception.getMessage());
-            } catch (Exception exception){
-                return ResponseEntity.badRequest().body("Відбулась помилка отримання опитувань");
-            }
-        }
-
-        @GetMapping("/all")
-        public ResponseEntity getSurveys(){
-            try {
-                return ResponseEntity.ok(surveyService.getSurveys());
-            } catch (SurveyNotFoundException exception){
-                return ResponseEntity.badRequest().body(exception.getMessage());
-            } catch (Exception exception){
-                return ResponseEntity.badRequest().body("Відбулась помилка отримання опитувань");
-            }
-        }
-
-        @DeleteMapping("/{id}")
-        public ResponseEntity deleteSurvey(@PathVariable Long id){
-            try {
-                return ResponseEntity.ok("Було успішно видалено опитування з id: " +
-                        surveyService.deleteSurvey(id));
-            } catch (SurveyNotFoundException exception){
-                return ResponseEntity.badRequest().body(exception.getMessage());
-            } catch (Exception exception){
-                return ResponseEntity.badRequest().body("Відбулась помилка отримання опитувань");
-            }
-        }
-
-         @PutMapping
-        public ResponseEntity updateSurvey(@RequestParam Long id,
-                                           @RequestBody SurveyEntity survey){
-            try {
-                surveyService.updateSurvey(id, survey);
-                return ResponseEntity.ok("Опитування було оновлено успішно");
-            }catch (SurveyAlreadyExistException exception) {
-                return ResponseEntity.badRequest().body(exception.getMessage());
-            } catch (Exception exception){
-                return ResponseEntity.badRequest().body("Відбулась помилка оновлення опитування!");
-            }
-        }
-    }
-```
-
-### Репозиторій для роботи з опитуванняи
-
-```
-    package com.example.lab6.Repository;
-
-    import com.example.lab6.Entity.SurveyEntity;
-    import org.springframework.data.repository.CrudRepository;
-    
-    public interface SurveyRepo extends CrudRepository <SurveyEntity, Long>{
-        SurveyEntity findByTitle(String title);
-    }
-```
-
-### Сервіс для роботи з опитуваннями
-
-```
-    package com.example.lab6.Service;
-
-    import com.example.lab6.Entity.SurveyEntity;
-    import com.example.lab6.Exception.SurveyAlreadyExistException;
-    import com.example.lab6.Exception.SurveyNotFoundException;
-    import com.example.lab6.Repository.SurveyRepo;
-    import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.stereotype.Service;
-    
-    @Service
-    public class SurveyService {
-    
-        @Autowired
-        private SurveyRepo surveyRepo;
-    
-        public SurveyEntity createSurvey(SurveyEntity survey) throws SurveyAlreadyExistException {
-            if(surveyRepo.findByTitle(survey.getTitle()) != null){
-                throw new SurveyAlreadyExistException("Опитування з такою назвою вже існує!");
-            }
-            return surveyRepo.save(survey);
-        }
-        
-        public SurveyEntity getOne(Long id) throws SurveyNotFoundException {
-            SurveyEntity survey = surveyRepo.findById(id).get();
-            if(survey == null){
-                throw new SurveyNotFoundException("Такого опитування не існує");
-            }
-            return survey;
-        }
-        
-        public Iterable<SurveyEntity> getSurveys() throws SurveyNotFoundException {
-            Iterable<SurveyEntity> surveyEntities = surveyRepo.findAll();
-            if (surveyEntities == null){
-                throw new SurveyNotFoundException("Опитувань не існує");
-            }
-            return surveyEntities;
-        }
-        
-        public Long deleteSurvey(Long id) throws SurveyNotFoundException {
-            if (surveyRepo.findById(id) == null){
-                throw new SurveyNotFoundException("Такого опитування вже не існує");
-            }
-            surveyRepo.deleteById(id);
-            return id;
-        }
-        
-        public SurveyEntity updateSurvey(Long id, SurveyEntity survey) throws SurveyAlreadyExistException {
-            SurveyEntity surveyEntity = surveyRepo.findById(id).get();
-            surveyEntity.setTitle(survey.getTitle());
-            surveyEntity.setDescription(survey.getDescription());
-            if(surveyRepo.findByTitle(surveyEntity.getTitle()) != null){
-                throw new SurveyAlreadyExistException("Опитування з такою назвою вже існує!");
-            }
-            return surveyRepo.save(surveyEntity);
-        }
-    }
-```
-
-### Виняткові ситуації, які можуть виникнути
-
-```
-    package com.example.lab6.Exception;
-    
-    public class SurveyAlreadyExistException extends Exception{
-        public SurveyAlreadyExistException(String message) {
-            super(message);
-        }
-    }
-```
-
-```
-    package com.example.lab6.Exception;
-
-    public class SurveyNotFoundException extends Exception{
-        public SurveyNotFoundException(String message) {
-            super(message);
-        }
-    }
+    exports.delete = (req, res) => {
+    const { id, role_id } = req.params;
+    if (!(id && role_id)) return res.status(400).json("Id and roleId required");
+    const query = `DELETE FROM user WHERE id=${id} and Role_id=${role_id}`;
+    db.query(`SELECT * FROM user WHERE id=${id} and Role_id=${role_id}`, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0)
+        return res.status(404).json("No user with this id");
+        db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json(`User with id ${id} and roleId ${role_id} was deleted`);
+        });
+    });
+    };
 ```
