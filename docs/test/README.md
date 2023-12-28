@@ -2,34 +2,32 @@
 
 Тестування системи проводилось у IDE JetBrains IntelliJ IDEA за допомогою застосунку Postman
 
-## Створення опитування
+## Створення користувача
 ### Успішне створення
-![screen1](./images/screen1.png)
+![screen1](./images/1.jpg)
 
-### Неуспішне створення
-![screen2](./images/screen2.png)
+### Неуспішне створення користувача(не вказано id)
+![screen2](./images/3.jpg)
 
 
-## Редагування опитування
+## Отримання всіх користувачів
+![screen3](./images/2.jpg)
+
+## Отримання одного користувача
+### Успішне отримання
+![screen4](./images/4.jpg)
+
+## Рудагування користувачча
 ### Успішне редагування
-![screen3](./images/screen3.png)
+![screen7](./images/5.jpg)
+![screen8](./images/6.jpg)
 
 ### Неуспішне редагування
-![screen4](./images/screen4.png)
+![screen8](./images/7.jpg)
 
-
-## Отримання всіх опитувань
-### Успішне отримання
-![screen5](./images/screen5.png)
-
-
-## Отримання одного опитування
-### Успішне отримання
-![screen6](./images/screen6.png)
-
-## Видалення опитування
+## Видалення користувачча
 ### Успішне видалення
-![screen7](./images/screen7.png)
+![screen7](./images/8.jpg)
 
 ### Неуспішне видалення
-![screen8](./images/screen8.png)
+![screen8](./images/9.jpg)
