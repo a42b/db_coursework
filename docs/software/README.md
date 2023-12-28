@@ -269,15 +269,15 @@ RESTfull API представляє собою CRUD застосунок.
 
 ### Routers route.js
 ```
-    "use strict";
+   "use strict";
 
     module.exports = (app) => {
     const users = require("./controller");
 
     app.route("/users").get(users.getAll);
-    app.route("/user/:id").get(users.get);
+    app.route("/user/:id/:role_id").get(users.get);
     app.route("/users/add").post(users.add);
-    app.route("/user/update").patch(users.update);
+    app.route("/user/update/:id/:role_id").patch(users.update);
     app.route("/user/delete/:id/:role_id").delete(users.delete);
 };
 ```
@@ -290,7 +290,6 @@ RESTfull API представляє собою CRUD застосунок.
     const db = require("./database");
 
     exports.getAll = (req, res) => {
-    console.log('getAll')
     const query = `SELECT * FROM User`;
     db.query(query, (err, result) => {
         if (err) return res.status(500).json(err);
@@ -300,7 +299,9 @@ RESTfull API представляє собою CRUD застосунок.
     };
 
     exports.get = (req, res) => {
-    const query = `SELECT * FROM User WHERE id=${req.params.id}`;
+    const { id, role_id } = req.params;
+    if (!(id && role_id)) return res.status(400).json("Id and roleId required");
+    const query = `SELECT * FROM User WHERE id=${id} and Role_id=${role_id}`;
     db.query(query, (err, result) => {
         if (err) return res.status(500).json(err);
         if (result.length === 0) return res.sendStatus(404);
@@ -336,7 +337,8 @@ RESTfull API представляє собою CRUD застосунок.
     };
 
     exports.update = (req, res) => {
-    const { id, role_id } = req.query;
+    const { id, role_id } = req.params;
+    if (!(id && role_id)) return res.status(400).json("Id and roleId required");
     const { firstname, lastname, email } = req.body;
 
     if (!(firstname || lastname || email)) {

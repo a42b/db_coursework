@@ -3,7 +3,6 @@
 const db = require("./database");
 
 exports.getAll = (req, res) => {
-  console.log('getAll')
   const query = `SELECT * FROM User`;
   db.query(query, (err, result) => {
     if (err) return res.status(500).json(err);
@@ -13,7 +12,9 @@ exports.getAll = (req, res) => {
 };
 
 exports.get = (req, res) => {
-  const query = `SELECT * FROM User WHERE id=${req.params.id}`;
+  const { id, role_id } = req.params;
+  if (!(id && role_id)) return res.status(400).json("Id and roleId required");
+  const query = `SELECT * FROM User WHERE id=${id} and Role_id=${role_id}`;
   db.query(query, (err, result) => {
     if (err) return res.status(500).json(err);
     if (result.length === 0) return res.sendStatus(404);
@@ -49,7 +50,8 @@ exports.add = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const { id, role_id } = req.query;
+  const { id, role_id } = req.params;
+  if (!(id && role_id)) return res.status(400).json("Id and roleId required");
   const { firstname, lastname, email } = req.body;
 
   if (!(firstname || lastname || email)) {
